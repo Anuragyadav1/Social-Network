@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { BASE_URL } from "../config";
 
 function Home() {
   const [recommendations, setRecommendations] = useState([]);
@@ -18,7 +19,7 @@ function Home() {
   const fetchFriendRequests = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/users/profile",
+        `${BASE_URL}/users/profile`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -34,7 +35,7 @@ function Home() {
   const fetchRecommendations = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/friends/recommendations",
+        `${BASE_URL}/friends/recommendations`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -54,7 +55,7 @@ function Home() {
     setIsLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/users/search?query=${searchQuery}`,
+        `${BASE_URL}/users/search?query=${searchQuery}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -71,7 +72,7 @@ function Home() {
   const handleFriendRequest = async (userId) => {
     try {
       await axios.post(
-        `http://localhost:5000/api/friends/request/${userId}`,
+        `${BASE_URL}/friends/request/${userId}`,
         {},
         {
           headers: {
@@ -92,7 +93,7 @@ function Home() {
   const handleAcceptRequest = async (userId) => {
     try {
       await axios.post(
-        `http://localhost:5000/api/friends/accept/${userId}`,
+        `${BASE_URL}/friends/accept/${userId}`,
         {},
         {
           headers: {
@@ -109,7 +110,7 @@ function Home() {
   const handleRejectRequest = async (userId) => {
     try {
       await axios.post(
-        `http://localhost:5000/api/friends/reject/${userId}`,
+        `${BASE_URL}/friends/reject/${userId}`,
         {},
         {
           headers: {

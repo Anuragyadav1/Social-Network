@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { BASE_URL } from "../config";
 
 function Profile() {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ function Profile() {
   const fetchFriends = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/users/friends",
+        `${BASE_URL}/users/friends`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -41,7 +42,7 @@ function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put("http://localhost:5000/api/users/profile", formData, {
+      await axios.put(`${BASE_URL}/users/profile`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

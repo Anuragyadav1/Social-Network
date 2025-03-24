@@ -158,14 +158,4 @@ The application includes an intelligent friend recommendation system that identi
 - Notification system
 - Mobile application
 
-## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👥 Contributors
-
-- Your Name - Initial work and development
-
-## 🙏 Acknowledgments
-
-- Thanks to all the open-source libraries that made this project possible

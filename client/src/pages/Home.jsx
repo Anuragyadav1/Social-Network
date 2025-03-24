@@ -190,7 +190,18 @@ function Home() {
           },
         }
       );
-      setSearchResults(response.data.users);
+
+      // Enhance search results by checking if users are already friends
+      const enhancedResults = response.data.users.map((user) => {
+        // Check if user is already a friend
+        const isFriend = friends.some((friend) => friend._id === user._id);
+        return {
+          ...user,
+          isFriend,
+        };
+      });
+
+      setSearchResults(enhancedResults);
     } catch (err) {
       console.error("Error searching users:", err);
     }
@@ -371,26 +382,49 @@ function Home() {
                           @{result.username}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleFriendRequest(result._id)}
-                        className="flex items-center rounded-md bg-gradient-to-r from-blue-600 to-blue-800 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-900 transition-all"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-4 h-4 mr-1"
+                      {result.isFriend ? (
+                        <button
+                          onClick={() => handleUnfriend(result._id)}
+                          className="flex items-center rounded-md bg-gradient-to-r from-red-600 to-red-700 px-3 py-1.5 text-sm font-medium text-white hover:from-red-700 hover:to-red-800 transition-all"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"
-                          />
-                        </svg>
-                        Add Friend
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="w-4 h-4 mr-1"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"
+                            />
+                          </svg>
+                          Unfriend
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleFriendRequest(result._id)}
+                          className="flex items-center rounded-md bg-gradient-to-r from-blue-600 to-blue-800 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-900 transition-all"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="w-4 h-4 mr-1"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"
+                            />
+                          </svg>
+                          Add Friend
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

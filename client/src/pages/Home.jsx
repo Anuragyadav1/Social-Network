@@ -10,6 +10,7 @@ function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRecs, setIsLoadingRecs] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -33,27 +34,132 @@ function Home() {
 
   const fetchRecommendations = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/friends/recommendations`, {
+      setIsLoadingRecs(true);
+      console.log("Fetching recommendations...");
+
+      // First get our friends to calculate mutual connections
+      const friendsResponse = await axios.get(`${BASE_URL}/users/friends`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      // Map to ensure compatibility with our component
-      const formattedRecommendations = response.data.recommendations.map(
-        (rec) => ({
-          user: {
-            _id: rec.user._id,
-            username: rec.user.username,
-            fullName: rec.user.fullName || rec.user.username, // Use username as fallback
-            interests: rec.user.interests || [],
-          },
-          mutualFriends: rec.mutualFriends || 0,
-          commonInterests: rec.commonInterests || 0,
-        })
-      );
-      setRecommendations(formattedRecommendations);
+
+      const myFriends = friendsResponse.data.friends || [];
+      const myFriendIds = myFriends.map((friend) => friend._id);
+
+      // Create a map of friend IDs to friend objects for quick lookup
+      const friendsMap = {};
+      myFriends.forEach((friend) => {
+        friendsMap[friend._id] = friend;
+      });
+
+      console.log("My friends:", myFriendIds);
+
+      // Get all users
+      const response = await axios.get(`${BASE_URL}/users/all`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      console.log("Raw users response:", response.data);
+
+      if (response.data.success && response.data.users) {
+        // Filter out users who are already friends and the current user
+        const nonFriendUsers = response.data.users.filter(
+          (u) => !myFriendIds.includes(u._id) && u._id !== user?._id
+        );
+
+        // For each potential friend, get their friends to find mutual connections
+        const recommendationsPromises = nonFriendUsers.map(
+          async (potentialFriend) => {
+            try {
+              // Get this user's friends
+              const userFriendsResponse = await axios.get(
+                `${BASE_URL}/users/user-friends/${potentialFriend._id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  },
+                }
+              );
+
+              const userFriends = userFriendsResponse.data.friends || [];
+              const userFriendIds = userFriends.map((friend) => friend._id);
+
+              // Calculate mutual friends - intersection of my friends and their friends
+              const mutualFriendIds = myFriendIds.filter((id) =>
+                userFriendIds.includes(id)
+              );
+
+              // Get the mutual friends details using the map
+              const mutualFriendsDetails = mutualFriendIds.map(
+                (id) => friendsMap[id]
+              );
+
+              const mutualFriendsCount = mutualFriendIds.length;
+
+              console.log(
+                `Mutual friends with ${potentialFriend.username}:`,
+                mutualFriendsCount,
+                mutualFriendsDetails.map((f) => f.username)
+              );
+
+              return {
+                user: {
+                  _id: potentialFriend._id,
+                  username: potentialFriend.username,
+                  fullName:
+                    potentialFriend.fullName || potentialFriend.username,
+                  interests: potentialFriend.interests || [],
+                },
+                mutualFriends: mutualFriendsCount,
+                mutualFriendsDetails: mutualFriendsDetails,
+                commonInterests: 0,
+              };
+            } catch (error) {
+              console.error(
+                `Error getting friends for ${potentialFriend.username}:`,
+                error
+              );
+              return {
+                user: {
+                  _id: potentialFriend._id,
+                  username: potentialFriend.username,
+                  fullName:
+                    potentialFriend.fullName || potentialFriend.username,
+                  interests: potentialFriend.interests || [],
+                },
+                mutualFriends: 0,
+                mutualFriendsDetails: [],
+                commonInterests: 0,
+              };
+            }
+          }
+        );
+
+        // Wait for all promises to resolve
+        let recommendations = await Promise.all(recommendationsPromises);
+
+        // Sort by number of mutual friends (highest first)
+        recommendations = recommendations.sort(
+          (a, b) => b.mutualFriends - a.mutualFriends
+        );
+
+        console.log(
+          "Formatted recommendations with mutual friends:",
+          recommendations
+        );
+        setRecommendations(recommendations);
+      } else {
+        console.error("Unexpected response format:", response.data);
+        setRecommendations([]);
+      }
     } catch (err) {
       console.error("Error fetching recommendations:", err);
+      setRecommendations([]);
+    } finally {
+      setIsLoadingRecs(false);
     }
   };
 
@@ -153,10 +259,18 @@ function Home() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
+
+      // Get the unfriended user's data before removing them from friends list
+      const unfriendedUser = friends.find((friend) => friend._id === friendId);
+
       // Update the friends list after unfriending
       setFriends((prevFriends) =>
         prevFriends.filter((friend) => friend._id !== friendId)
       );
+
+      // Since we've removed a friend, we need to update all recommendations with proper mutual friends
+      // It's better to refresh recommendations entirely instead of trying to calculate on the client
+      setTimeout(fetchRecommendations, 500);
     } catch (err) {
       console.error("Error unfriending user:", err);
     }
@@ -279,26 +393,55 @@ function Home() {
             </div>
           )}
 
-          {/* Recommendations */}
-          {recommendations.length > 0 && (
-            <div className="rounded-lg bg-white p-6 shadow-lg">
-              <h2 className="mb-4 text-2xl font-bold">People You May Know</h2>
-              <div className="space-y-4">
-                {recommendations.map((rec) => (
+          {/* Recommendations - Always show this section */}
+          <div className="rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-2xl font-bold">People You May Know</h2>
+            <div className="space-y-4">
+              {isLoadingRecs ? (
+                <div className="py-4 text-center text-gray-500">
+                  <p>Loading recommendations...</p>
+                </div>
+              ) : recommendations && recommendations.length > 0 ? (
+                recommendations.map((rec) => (
                   <div
                     key={rec.user._id}
                     className="flex items-center justify-between rounded-lg border p-4"
                   >
-                    <div>
+                    <div className="w-full">
                       <p className="font-medium">{rec.user.fullName}</p>
                       <p className="text-sm text-gray-500">
                         @{rec.user.username}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {rec.mutualFriends} mutual friends
-                        {rec.commonInterests > 0 &&
-                          ` • ${rec.commonInterests} common interests`}
-                      </p>
+
+                      {/* Mutual Friends Section */}
+                      {rec.mutualFriends > 0 ? (
+                        <div className="mt-1">
+                          <details className="cursor-pointer">
+                            <summary className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                              {rec.mutualFriends} mutual{" "}
+                              {rec.mutualFriends === 1 ? "friend" : "friends"}
+                            </summary>
+                            <div className="mt-2 pl-2 border-l-2 border-blue-200 text-sm text-gray-600">
+                              {rec.mutualFriendsDetails.map((friend, idx) => (
+                                <p key={idx} className="my-1">
+                                  {friend.fullName || friend.username}
+                                </p>
+                              ))}
+                            </div>
+                          </details>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          No mutual friends
+                        </p>
+                      )}
+
+                      {rec.commonInterests > 0 && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {rec.commonInterests} common interests
+                        </p>
+                      )}
+
                       {rec.user.interests && rec.user.interests.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {rec.user.interests.map((interest, index) => (
@@ -314,15 +457,20 @@ function Home() {
                     </div>
                     <button
                       onClick={() => handleFriendRequest(rec.user._id)}
-                      className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+                      className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 ml-4"
                     >
                       Add Friend
                     </button>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <p className="text-gray-500">
+                  No recommendations available right now. Try searching for
+                  users to connect with.
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

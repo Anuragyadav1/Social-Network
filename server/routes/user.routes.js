@@ -100,4 +100,51 @@ router.get("/friends", protect, async (req, res) => {
   }
 });
 
+// Get all users (for recommendations fallback)
+router.get("/all", protect, async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user._id } })
+      .select("username fullName profilePicture interests")
+      .limit(10); // Limit to 10 users to avoid large response
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
+// Get a specific user's friends (for mutual connections)
+router.get("/user-friends/:userId", protect, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const targetUser = await User.findById(userId).populate(
+      "friends",
+      "username fullName profilePicture"
+    );
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      friends: targetUser.friends,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
 module.exports = router;

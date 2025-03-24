@@ -172,4 +172,49 @@ router.get("/recommendations", protect, async (req, res) => {
   }
 });
 
+// Unfriend a user
+router.delete("/unfriend/:id", protect, async (req, res) => {
+  try {
+    const friendId = req.params.id;
+    const currentUser = await User.findById(req.user._id);
+    const friendUser = await User.findById(friendId);
+
+    if (!friendUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if they are actually friends
+    if (!currentUser.friends.includes(friendId)) {
+      return res.status(400).json({
+        success: false,
+        message: "You are not friends with this user",
+      });
+    }
+
+    // Remove from both users' friends lists
+    currentUser.friends = currentUser.friends.filter(
+      (id) => id.toString() !== friendId.toString()
+    );
+    friendUser.friends = friendUser.friends.filter(
+      (id) => id.toString() !== currentUser._id.toString()
+    );
+
+    await currentUser.save();
+    await friendUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Friend removed successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
 module.exports = router;

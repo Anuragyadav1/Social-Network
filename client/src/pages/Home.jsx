@@ -6,6 +6,7 @@ import { BASE_URL } from "../config";
 function Home() {
   const [recommendations, setRecommendations] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
+  const [friends, setFriends] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,18 +15,16 @@ function Home() {
   useEffect(() => {
     fetchFriendRequests();
     fetchRecommendations();
+    fetchFriends();
   }, []);
 
   const fetchFriendRequests = async () => {
     try {
-      const response = await axios.get(
-        `${BASE_URL}/users/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await axios.get(`${BASE_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       setFriendRequests(response.data.user.friendRequests);
     } catch (err) {
       console.error("Error fetching friend requests:", err);
@@ -34,17 +33,40 @@ function Home() {
 
   const fetchRecommendations = async () => {
     try {
-      const response = await axios.get(
-        `${BASE_URL}/friends/recommendations`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const response = await axios.get(`${BASE_URL}/friends/recommendations`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      // Map to ensure compatibility with our component
+      const formattedRecommendations = response.data.recommendations.map(
+        (rec) => ({
+          user: {
+            _id: rec.user._id,
+            username: rec.user.username,
+            fullName: rec.user.fullName || rec.user.username, // Use username as fallback
+            interests: rec.user.interests || [],
           },
-        }
+          mutualFriends: rec.mutualFriends || 0,
+          commonInterests: rec.commonInterests || 0,
+        })
       );
-      setRecommendations(response.data.recommendations);
+      setRecommendations(formattedRecommendations);
     } catch (err) {
       console.error("Error fetching recommendations:", err);
+    }
+  };
+
+  const fetchFriends = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/users/friends`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setFriends(response.data.friends);
+    } catch (err) {
+      console.error("Error fetching friends:", err);
     }
   };
 
@@ -124,6 +146,22 @@ function Home() {
     }
   };
 
+  const handleUnfriend = async (friendId) => {
+    try {
+      await axios.delete(`${BASE_URL}/friends/unfriend/${friendId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      // Update the friends list after unfriending
+      setFriends((prevFriends) =>
+        prevFriends.filter((friend) => friend._id !== friendId)
+      );
+    } catch (err) {
+      console.error("Error unfriending user:", err);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -158,7 +196,9 @@ function Home() {
                   className="flex items-center justify-between rounded-lg border p-4"
                 >
                   <div>
-                    <p className="font-medium">{result.fullName}</p>
+                    <p className="font-medium">
+                      {result.fullName || result.username}
+                    </p>
                     <p className="text-sm text-gray-500">@{result.username}</p>
                   </div>
                   <button
@@ -211,6 +251,34 @@ function Home() {
             </div>
           )}
 
+          {/* Friends List */}
+          {friends.length > 0 && (
+            <div className="rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="mb-4 text-2xl font-bold">Your Friends</h2>
+              <div className="space-y-4">
+                {friends.map((friend) => (
+                  <div
+                    key={friend._id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div>
+                      <p className="font-medium">{friend.fullName}</p>
+                      <p className="text-sm text-gray-500">
+                        @{friend.username}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleUnfriend(friend._id)}
+                      className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+                    >
+                      Unfriend
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recommendations */}
           {recommendations.length > 0 && (
             <div className="rounded-lg bg-white p-6 shadow-lg">
@@ -228,7 +296,21 @@ function Home() {
                       </p>
                       <p className="text-sm text-gray-500">
                         {rec.mutualFriends} mutual friends
+                        {rec.commonInterests > 0 &&
+                          ` • ${rec.commonInterests} common interests`}
                       </p>
+                      {rec.user.interests && rec.user.interests.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {rec.user.interests.map((interest, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            >
+                              {interest}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => handleFriendRequest(rec.user._id)}

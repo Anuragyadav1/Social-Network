@@ -233,7 +233,7 @@ function Home() {
 
   const handleAcceptRequest = async (userId) => {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${BASE_URL}/friends/accept/${userId}`,
         {},
         {
@@ -242,7 +242,26 @@ function Home() {
           },
         }
       );
-      fetchFriendRequests();
+
+      // Get the accepted user's data from the friend requests
+      const acceptedUser = friendRequests.find(
+        (request) => request._id === userId
+      );
+
+      // Update friends list immediately
+      if (acceptedUser) {
+        setFriends((prevFriends) => [...prevFriends, acceptedUser]);
+      }
+
+      // Remove the accepted request from friend requests
+      setFriendRequests((prevRequests) =>
+        prevRequests.filter((request) => request._id !== userId)
+      );
+
+      // Remove the accepted user from recommendations
+      setRecommendations((prevRecs) =>
+        prevRecs.filter((rec) => rec.user._id !== userId)
+      );
     } catch (err) {
       console.error("Error accepting friend request:", err);
     }

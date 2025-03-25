@@ -111,6 +111,7 @@ function Home() {
                   username: potentialFriend.username,
                   fullName:
                     potentialFriend.fullName || potentialFriend.username,
+                  profilePicture: potentialFriend.profilePicture,
                   interests: potentialFriend.interests || [],
                 },
                 mutualFriends: mutualFriendsCount,
@@ -128,6 +129,7 @@ function Home() {
                   username: potentialFriend.username,
                   fullName:
                     potentialFriend.fullName || potentialFriend.username,
+                  profilePicture: potentialFriend.profilePicture,
                   interests: potentialFriend.interests || [],
                 },
                 mutualFriends: 0,
@@ -374,13 +376,26 @@ function Home() {
                       key={result._id}
                       className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all"
                     >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {result.fullName || result.username}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          @{result.username}
-                        </p>
+                      <div className="flex items-center">
+                        {result.profilePicture ? (
+                          <img
+                            src={result.profilePicture}
+                            alt={result.fullName || result.username}
+                            className="h-10 w-10 rounded-full object-cover mr-3 border border-gray-200"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-xl font-bold text-gray-500 mr-3">
+                            {(result.fullName || result.username).charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {result.fullName || result.username}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            @{result.username}
+                          </p>
+                        </div>
                       </div>
                       {result.isFriend ? (
                         <button
@@ -436,30 +451,41 @@ function Home() {
           <div className="space-y-8">
             {/* Friend Requests */}
             {friendRequests.length > 0 && (
-              <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 transition-all hover:shadow-xl">
-                <div className="bg-gradient-to-r from-green-600 to-green-800 p-4">
-                  <h2 className="text-xl font-bold text-white">
-                    Friend Requests
-                  </h2>
-                </div>
-                <div className="p-4 divide-y divide-gray-100">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-2 rounded-t-lg">
+                  Friend Requests ({friendRequests.length})
+                </h3>
+                <div className="rounded-b-lg border border-gray-200 bg-white">
                   {friendRequests.map((request) => (
                     <div
                       key={request._id}
-                      className="flex items-center justify-between py-4 px-2"
+                      className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 transition-all"
                     >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {request.fullName}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          @{request.username}
-                        </p>
+                      <div className="flex items-center">
+                        {request.profilePicture ? (
+                          <img
+                            src={request.profilePicture}
+                            alt={request.fullName || request.username}
+                            className="h-10 w-10 rounded-full object-cover mr-3 border border-gray-200"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-xl font-bold text-gray-500 mr-3">
+                            {(request.fullName || request.username).charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {request.fullName || request.username}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            @{request.username}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex space-x-2">
                         <button
                           onClick={() => handleAcceptRequest(request._id)}
-                          className="flex items-center rounded-md bg-gradient-to-r from-green-600 to-green-700 px-3 py-1.5 text-sm font-medium text-white hover:from-green-700 hover:to-green-800 transition-all"
+                          className="flex items-center rounded-md bg-gradient-to-r from-green-500 to-green-600 px-3 py-1.5 text-sm font-medium text-white hover:from-green-600 hover:to-green-700 transition-all"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -479,7 +505,7 @@ function Home() {
                         </button>
                         <button
                           onClick={() => handleRejectRequest(request._id)}
-                          className="flex items-center rounded-md bg-gradient-to-r from-red-600 to-red-700 px-3 py-1.5 text-sm font-medium text-white hover:from-red-700 hover:to-red-800 transition-all"
+                          className="flex items-center rounded-md bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-sm font-medium text-white hover:from-red-600 hover:to-red-700 transition-all"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
